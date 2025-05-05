@@ -134,7 +134,7 @@ if query:
           If the retrieved content is not helpfull then explain with your own knowledge
     """
 
-    llm = ChatGoogleGenerativeAI(
+    llm = ChatGroq(
         model = "gemini-1.5-pro",
         temperature = 0.1,
 
