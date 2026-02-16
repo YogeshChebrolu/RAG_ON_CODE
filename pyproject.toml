@@ -1,0 +1,16 @@
+[project]
+name = "rag-on-code"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "python-dotenv>=1.0.0",
+    "sentence-transformers>=2.2.0",
+    "firecrawl>=4.14.1",
+    "langchain-groq>=1.1.2",
+    "langchain-huggingface>=1.2.0",
+    "langchain-pinecone>=0.2.13",
+    "pymongo>=4.16.0",
+    "streamlit>=1.54.0",
+]

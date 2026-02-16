@@ -61,24 +61,24 @@ def get_parent_ids(results):
 def get_relevant_context(results, mongodb_client):
     if not mongodb_client:
         return "Could not connect to MongoDB to retrieve code chunks."
-    
+
     context = ""
-    
+
     try:
         db = mongodb_client['code']
         code_collection = db['chunks']
-        
+
         for i, res in enumerate(results, start=1):
             text = res.page_content
             context += f"Text Chunk {i}: {text}\n\n"
-            
+
             chunk_id = res.metadata['chunk_id']
             code_chunks = code_collection.find({"parent_text_id": chunk_id})
-            
+
             for j, chunk in enumerate(code_chunks, start=1):
                 code_content = chunk['page_content']
                 context += f"Code {j} for Text Chunk {i}: {code_content}\n\n"
-        
+
         return context
     except Exception as e:
         st.error(f"Error retrieving context: {e}")
@@ -89,10 +89,10 @@ def get_relevant_context(results, mongodb_client):
 def validate_url(url):
     """
     Validate if the provided URL is valid and belongs to Pydantic documentation.
-    
+
     Args:
         url (str): URL to validate
-        
+
     Returns:
         bool: True if valid, False otherwise
     """
@@ -102,10 +102,10 @@ def validate_url(url):
 def fetch_content_from_url(url):
     """
     Scrape content from the provided Pydantic documentation URL using Firecrawl.
-    
+
     Args:
         url (str): URL to fetch content from
-        
+
     Returns:
         str: Scraped content from the URL
     """
@@ -120,24 +120,24 @@ def fetch_content_from_url(url):
 def get_url_context(url):
     """
     Main function to handle URL processing workflow.
-    
+
     Args:
         url (str): URL to process
-        
+
     Returns:
         str: Context extracted from the URL to send to LLM
     """
     if not validate_url(url):
         st.error("The URL doesn't appear to be a valid Pydantic documentation URL")
         return None
-    
+
     with st.spinner("Scraping content from URL..."):
         content = fetch_content_from_url(url)
-    
+
     if not content:
         st.error("Failed to extract content from the URL")
         return None
-    
+
     return content
 
 
@@ -157,7 +157,7 @@ with tab1:
             embeddings = load_embeddings()
             pinecone_index = connect_pinecone()
             mongodb_client = connect_mongodb()
-            
+
             if not pinecone_index or not embeddings:
                 st.error("Could not connect to Pinecone or load embeddings.")
             else:
@@ -165,38 +165,38 @@ with tab1:
                 vector_store = create_vector_store(pinecone_index, embeddings)
                 if vector_store:
                     results = relevant_text_chunks(query, vector_store)
-                    
+
                     if results:
                         # Get relevant context combining text and code chunks
                         context = get_relevant_context(results, mongodb_client)
-                        
+
                         # Display retrieved chunks
                         with st.expander("Retrieved Context"):
                             st.write(context)
-                        
+
                         # Create prompt for LLM
                         prompt = f"""
                         You are a helpful Python expert. You will answer the user's question about pydantic AI code documentation.
                         The relevant code content and text content related to the query from documentation are retrieved and given to you below.
-                        
+
                         User's question: {query}
-                        
+
                         Context to the question: {context}
-                        
+
                         Answer the user's query by explaining the retrieved text and code in context.
                         If the retrieved content is not helpful, then explain with your own knowledge about pydantic.
                         """
-                        
+
                         # Invoke the LLM
                         try:
                             llm = ChatGroq(
                                 api_key=os.getenv("GROQ_API_KEY"),
-                                model="llama3-70b-8192",
+                                model="openai/gpt-oss-120b",
                                 temperature=0.1,
                             )
-                            
+
                             response = llm.invoke(prompt)
-                            
+
                             # Display the result
                             st.subheader("Answer")
                             st.write(response.content)
@@ -209,43 +209,43 @@ with tab1:
 with tab2:
     st.header("Process Pydantic Documentation URL")
     url = st.text_input("Enter Pydantic documentation URL", placeholder="https://docs.pydantic.dev/latest/...", key="url_input")
-    
+
     if url:
         # Process the URL
         url_context = get_url_context(url)
-        
+
         if url_context:
             # Display the extracted content
             with st.expander("Extracted Content"):
                 st.markdown(url_context)
-            
+
             query_for_url = st.text_input("Enter your question about this documentation", placeholder="What does this code do?", key="url_query")
-            
+
             if query_for_url:
                 with st.spinner("Generating answer..."):
                     # Create prompt for LLM
                     url_prompt = f"""
                     You are a helpful Python expert. You will answer the user's question about pydantic documentation.
                     The user has provided a specific URL to Pydantic documentation, and the content has been extracted.
-                    
+
                     User's question: {query_for_url}
-                    
+
                     URL content: {url_context}
-                    
+
                     Answer the user's query by explaining the relevant parts of the documentation.
                     Focus specifically on the content from the URL that addresses their question.
                     """
-                    
+
                     # Invoke the LLM
                     try:
                         llm = ChatGroq(
                             api_key=os.getenv("GROQ_API_KEY"),
-                            model="llama3-70b-8192",
+                            model="openai/gpt-oss-120bopenai/gpt-oss-120b",
                             temperature=0.1,
                         )
-                        
+
                         response = llm.invoke(url_prompt)
-                        
+
                         # Display the result
                         st.subheader("Answer")
                         st.markdown(response.content)
